@@ -24,7 +24,8 @@
     "prisma:studio": "prisma studio",
     "seed": "ts-node prisma/seed.ts",
     "db:reset": "prisma migrate reset --force && npm run seed",
-    "setup": "npm run prisma:push && npm run seed"
+    "setup": "npm run prisma:push && npm run seed",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
