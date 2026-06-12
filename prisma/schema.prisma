@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Carrera {
+  id                Int                 @id @default(autoincrement())
+  nombre            String              @db.VarChar(200)
+  facultad          String?             @db.VarChar(200)
+  universidad       String              @db.VarChar(200)
+  tituloOtorgado    String?             @map("titulo_otorgado") @db.VarChar(200)
+  gestion           String?             @db.VarChar(20)
+  autoridades       Autoridad[]
+  infoInstitucional InfoInstitucional[]
+  objetivos         Objetivo[]
+
+  @@map("carrera")
+}
+
+model Autoridad {
+  id             Int     @id @default(autoincrement())
+  carreraId      Int     @map("carrera_id")
+  cargo          String  @db.VarChar(150)
+  nombreCompleto String  @map("nombre_completo") @db.VarChar(200)
+  periodo        String? @db.VarChar(30)
+  carrera        Carrera @relation(fields: [carreraId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("autoridades")
+}
+
+model InfoInstitucional {
+  id        Int     @id @default(autoincrement())
+  carreraId Int     @map("carrera_id")
+  tipo      String  @db.VarChar(50)
+  contenido String
+  carrera   Carrera @relation(fields: [carreraId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([carreraId, tipo], map: "uq_info_tipo")
+  @@map("info_institucional")
+}
+
+model Objetivo {
+  id          Int     @id @default(autoincrement())
+  carreraId   Int     @map("carrera_id")
+  descripcion String
+  orden       Int     @default(1)
+  carrera     Carrera @relation(fields: [carreraId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("objetivos")
+}
+
+model Edificio {
+  id        Int     @id @default(autoincrement())
+  nombre    String  @unique @db.VarChar(200)
+  direccion String? @db.VarChar(300)
+  urlMaps   String? @map("url_maps") @db.VarChar(500)
+  aulas     Aula[]
+
+  @@map("edificios")
+}
+
+model Aula {
+  id                  Int       @id @default(autoincrement())
+  codigo              String    @unique @db.VarChar(50)
+  nombre              String    @db.VarChar(200)
+  tipo                String    @db.VarChar(50)
+  edificioId          Int       @map("edificio_id")
+  ubicacionReferencia String?   @map("ubicacion_referencia") @db.VarChar(300)
+  urlMaps             String?   @map("url_maps") @db.VarChar(500)
+  edificio            Edificio  @relation(fields: [edificioId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  horarios            Horario[]
+
+  @@map("aulas")
+}
+
+model Mencion {
+  id              Int               @id @default(autoincrement())
+  nombre          String            @unique @db.VarChar(200)
+  prefijosigla    String?           @map("prefijo_sigla") @db.VarChar(10)
+  electivas       Electiva[]
+  materias        Materia[]
+  planEstudio     PlanEstudio[]
+  tecnicoSuperior TecnicoSuperior[]
+
+  @@map("menciones")
+}
+
+model Materia {
+  id                Int            @id @default(autoincrement())
+  sigla             String         @unique @db.VarChar(20)
+  nombre            String         @db.VarChar(200)
+  semestre          Int?
+  mencionId         Int?           @map("mencion_id")
+  mencion           Mencion?       @relation(fields: [mencionId], references: [id], onUpdate: NoAction)
+  paralelos         Paralelo[]
+  prerequisitosDe   Prerequisito[] @relation("MateriaPrincipal")
+  prerequisitosPara Prerequisito[] @relation("MateriaPrerequisito")
+
+  @@index([nombre], map: "idx_materias_nombre")
+  @@index([semestre], map: "idx_materias_semestre")
+  @@map("materias")
+}
+
+model Docente {
+  id             Int        @id @default(autoincrement())
+  nombreCompleto String     @unique @map("nombre_completo") @db.VarChar(200)
+  paralelos      Paralelo[]
+
+  @@map("docentes")
+}
+
+model Paralelo {
+  id        Int       @id @default(autoincrement())
+  materiaId Int       @map("materia_id")
+  letra     String    @db.VarChar(5)
+  docenteId Int?      @map("docente_id")
+  gestion   String    @default("2025") @db.VarChar(10)
+  horarios  Horario[]
+  docente   Docente?  @relation(fields: [docenteId], references: [id], onUpdate: NoAction)
+  materia   Materia   @relation(fields: [materiaId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([materiaId, letra, gestion], map: "uq_paralelo")
+  @@index([docenteId], map: "idx_paralelos_docente")
+  @@index([materiaId], map: "idx_paralelos_materia")
+  @@map("paralelos")
+}
+
+model Horario {
+  id         Int      @id @default(autoincrement())
+  paraleloId Int      @map("paralelo_id")
+  dia        String   @db.VarChar(20)
+  horaInicio DateTime @map("hora_inicio") @db.Time(6)
+  horaFin    DateTime @map("hora_fin") @db.Time(6)
+  aulaId     Int?     @map("aula_id")
+  aula       Aula?    @relation(fields: [aulaId], references: [id], onUpdate: NoAction)
+  paralelo   Paralelo @relation(fields: [paraleloId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([dia], map: "idx_horarios_dia")
+  @@index([paraleloId], map: "idx_horarios_paralelo")
+  @@map("horarios")
+}
+
+model Prerequisito {
+  id                      Int      @id @default(autoincrement())
+  materiaId               Int      @map("materia_id")
+  prerequisitoMateriaId   Int?     @map("prerequisito_materia_id")
+  prerequisitoDescripcion String?  @map("prerequisito_descripcion") @db.VarChar(300)
+  materia                 Materia  @relation("MateriaPrincipal", fields: [materiaId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  prerequisitoMateria     Materia? @relation("MateriaPrerequisito", fields: [prerequisitoMateriaId], references: [id], onUpdate: NoAction)
+
+  @@map("prerequisitos")
+}
+
+model ModalidadIngreso {
+  id          Int                @id @default(autoincrement())
+  nombre      String             @db.VarChar(200)
+  sigla       String?            @db.VarChar(20)
+  descripcion String?
+  requisitos  RequisitoIngreso[]
+
+  @@map("modalidades_ingreso")
+}
+
+model RequisitoIngreso {
+  id          Int              @id @default(autoincrement())
+  modalidadId Int              @map("modalidad_id")
+  descripcion String
+  orden       Int              @default(1)
+  modalidad   ModalidadIngreso @relation(fields: [modalidadId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("requisitos_ingreso")
+}
+
+model Beca {
+  id          Int             @id @default(autoincrement())
+  nombre      String          @db.VarChar(200)
+  descripcion String?
+  requisitos  RequisitoBeca[]
+
+  @@map("becas")
+}
+
+model RequisitoBeca {
+  id          Int    @id @default(autoincrement())
+  becaId      Int    @map("beca_id")
+  descripcion String
+  orden       Int    @default(1)
+  beca        Beca   @relation(fields: [becaId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("requisitos_beca")
+}
+
+model Enlace {
+  id     Int     @id @default(autoincrement())
+  nombre String  @db.VarChar(200)
+  url    String  @db.VarChar(500)
+  tipo   String? @db.VarChar(50)
+
+  @@map("enlaces")
+}
+
+model Contacto {
+  id              Int     @id @default(autoincrement())
+  area            String  @db.VarChar(200)
+  direccion       String? @db.VarChar(300)
+  telefono        String? @db.VarChar(100)
+  email           String? @db.VarChar(200)
+  whatsapp        String? @db.VarChar(200)
+  horarioAtencion String? @map("horario_atencion") @db.VarChar(200)
+
+  @@map("contacto")
+}
+
+model PlanEstudio {
+  id                 Int     @id @default(autoincrement())
+  mencionId          Int     @map("mencion_id")
+  materiaSigla       String  @map("materia_sigla") @db.VarChar(20)
+  materiaNombre      String  @map("materia_nombre") @db.VarChar(200)
+  semestre           Int
+  prerequisitosTexto String? @map("prerequisitos_texto") @db.VarChar(500)
+  orden              Int     @default(1)
+  mencion            Mencion @relation(fields: [mencionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([mencionId], map: "idx_plan_mencion")
+  @@index([semestre], map: "idx_plan_semestre")
+  @@map("plan_estudio")
+}
+
+model Electiva {
+  id                 Int     @id @default(autoincrement())
+  mencionId          Int     @map("mencion_id")
+  sigla              String  @db.VarChar(20)
+  nombre             String  @db.VarChar(200)
+  prerequisitosTexto String? @map("prerequisitos_texto") @db.VarChar(300)
+  mencion            Mencion @relation(fields: [mencionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([mencionId], map: "idx_electivas_mencion")
+  @@map("electivas")
+}
+
+model TecnicoSuperior {
+  id                 Int     @id @default(autoincrement())
+  mencionId          Int     @map("mencion_id")
+  nombrePrograma     String  @map("nombre_programa") @db.VarChar(300)
+  materiaSigla       String  @map("materia_sigla") @db.VarChar(20)
+  materiaNombre      String  @map("materia_nombre") @db.VarChar(200)
+  tipo               String? @db.VarChar(50)
+  prerequisitosTexto String? @map("prerequisitos_texto") @db.VarChar(500)
+  orden              Int     @default(1)
+  mencion            Mencion @relation(fields: [mencionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("tecnico_superior")
+}
+
+model TelegramSession {
+  id         Int      @id @default(autoincrement())
+  telegramId BigInt   @unique @map("telegram_id")
+  state      String   @default("ACTIVE") @db.VarChar(50)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("telegram_sessions")
+}
