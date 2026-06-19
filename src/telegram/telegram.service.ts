@@ -142,6 +142,8 @@ export class TelegramService implements OnModuleInit {
     if (!this.bot) return null;
     return webhookCallback(this.bot, 'express', {
       secretToken: process.env.TELEGRAM_SECRET_TOKEN,
+      timeoutMilliseconds: 10000,
+      onTimeout: 'return',
     });
   }
 }
